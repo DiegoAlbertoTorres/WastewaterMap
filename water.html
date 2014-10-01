@@ -43,6 +43,10 @@
 	<script src="./countries.js"></script>
 	<script src="./jquery-1.11.1.min.js"></script>
 	<script src="./tinycolor.js"></script>
+	
+	<script src="./leaflet-search.js"></script>
+	<link rel="stylesheet" href="./leaflet-search.css" />
+
 	<script>
 		var geojson;
 		var map;
@@ -90,6 +94,20 @@
 			// Have to get rid of this reasonably
 			setTimeout(function(){
 				geojson = L.geoJson(countries, {style: style, onEachFeature: onEachFeature}).addTo(map);
+				
+				var searchControl = new L.Control.Search({layer: geojson, propertyName: 'name', circleLocation:false});
+				searchControl.on('search_locationfound', function(e) {
+
+					//e.layer.setStyle({fillColor: '#3f0'});
+					map.fitBounds(e.layer.getBounds());
+
+				}).on('search_collapsed', function(e) {
+
+					featuresLayer.eachLayer(function(layer) {
+						featuresLayer.resetStyle(layer);
+					}); 
+				});
+				map.addControl(searchControl);
 			}, 1000);
 		});
 		
@@ -131,7 +149,7 @@
 			if (props){
 				display = "<b>" + props.name + "</b>";
 				if (props.val == -9999)
-					display += "<br /> Sorry, we do not have data for" + props.name;
+					display += "<br /> Sorry, we do not have data for " + props.name;
 				else
 					display += "<br />" + props.val + " points (out of 100)"
 			}
@@ -214,6 +232,7 @@
 			// Load data into JSON object
 			for(i = 0; i < countries.features.length; i++){
 				countries.features[i].properties.val = parseInt(lines[i][27].split(':')[1]);
+				console.log(countries.features[i]);
 			}
 		}
 	</script>
