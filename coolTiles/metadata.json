@@ -1,0 +1,10 @@
+{
+    "center": "0,0,2",
+    "minzoom": "0",
+    "template": "",
+    "bounds": "-180,-85.0511,180,85.0511",
+    "maxzoom": "7",
+    "description": "",
+    "name": "Water Treatment Map",
+    "version": "1.0.0"
+}
