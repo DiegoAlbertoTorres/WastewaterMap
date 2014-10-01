@@ -68,13 +68,22 @@
 			info.addTo(map);
 			legend.addTo(map);
 			
-			//L.rectangle([[-1000, -1000],[1000, 1000]], {color: "#9CC2F8", fillOpacity: 1}).addTo(map);
+			L.tileLayer('./coolTiles/{id}/{z}/{x}/{y}.png', {
+				id: ''
+			}).addTo(map);
 			
+			//L.rectangle([[-1000, -1000],[1000, 1000]], {color: "#B5D0D0", fillOpacity: 1}).addTo(map);
+			
+			//var db = new SQLitePlugin("./water.mbtiles");
+			//console.log(db);
+			//var bath = new L.TileLayer.MBTiles('./water.mbtiles', {maxZoom: 14, scheme: 'tms'}, db);
+			//map.addLayer(bath);
+  
 			function style(feature){
 				return {
 					"fillColor": colorPal(feature.properties.val),
 					"color": "#fff",
-					"weight": 1,
+					"weight": 1.5,
 					"fillOpacity": 0.8
 				};
 			};
