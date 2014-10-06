@@ -106,7 +106,6 @@
 					geojson.resetStyle(layer);
 				}); 
 
-				console.log("lol");
 				e.layer.setStyle({
 					weight: 2,
 					color: "#0000ff",
@@ -118,10 +117,11 @@
 				//var largestRegion = getLargestBoundingRegion(e.layer.feature);
 				//var bounds = L.polygon(largestRegion).getBounds();
 				//map.panTo(bounds);
-				//map.fitBounds(bounds);
+				//console.log(bounds);
 				 
 				//console.log(e.layer);
-				//map.fitBounds(e.layer.feature.geometry.getBounds());
+				map.fitBounds(e.layer.getBounds());
+				info.update(e.layer.feature.properties);
 
 			}).on('search_collapsed', function(e) {
 				geojson.eachLayer(function(layer) {
