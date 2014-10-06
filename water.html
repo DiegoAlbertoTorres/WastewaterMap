@@ -100,12 +100,13 @@
 		function addGeoJson(){
 			geojson = L.geoJson(countries, {style: style, onEachFeature: onEachFeature}).addTo(map);
 				
-			var searchControl = new L.Control.Search({layer: geojson, propertyName: 'NAME', circleLocation:false});
+			var searchControl = new L.Control.Search({layer: geojson, propertyName: 'NAME', circleLocation: false, autoType: false, zoom: false, });
 			searchControl.on('search_locationfound', function(e) {
 				geojson.eachLayer(function(layer) {
 					geojson.resetStyle(layer);
 				}); 
 
+				console.log("lol");
 				e.layer.setStyle({
 					weight: 2,
 					color: "#0000ff",
@@ -114,13 +115,13 @@
 					fillOpacity: 0.7
 				});
 				// Find biggest area
-				// console.log(e.layer.feature);
-				var largestRegion = getLargestBoundingRegion(e.layer.feature);
-				var bounds = L.polygon(largestRegion).getBounds();
-				var coords = bounds._northEast;
-				console.log(coords);
-				// map.panTo(coords);
-				// map.fitBounds(bounds);
+				//var largestRegion = getLargestBoundingRegion(e.layer.feature);
+				//var bounds = L.polygon(largestRegion).getBounds();
+				//map.panTo(bounds);
+				//map.fitBounds(bounds);
+				 
+				//console.log(e.layer);
+				//map.fitBounds(e.layer.feature.geometry.getBounds());
 
 			}).on('search_collapsed', function(e) {
 				geojson.eachLayer(function(layer) {
