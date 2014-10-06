@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-	<title>Leaflet Quick Start Guide Example</title>
+	<title>Wastewater Treatment 2014</title>
 	<meta charset="utf-8" />
 
 	<meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -14,14 +14,16 @@
 			position: absolute;
 			top: 0px;
 			left: 0px;
+			background: #5896CE;
 		}
 		.info {
 			padding: 6px 8px;
 			font: 14px/16px Arial, Helvetica, sans-serif;
 			background: white;
-			background: rgba(255,255,255,0.8);
+			background: rgba(240,240,240,1);
 			box-shadow: 0 0 15px rgba(0,0,0,0.2);
-			border-radius: 5px;
+			border-radius: 2px;
+			opacity: 1;
 		}
 		.info h4 {
 			margin: 0 0 5px;
@@ -36,13 +38,17 @@
 			height: 18px;
 			float: left;
 			margin-right: 8px;
-			opacity: 0.7;
+			opacity: 1;
 		}
 	</style>
 	<script src="./leaflet.js"></script>
+<!--
 	<script src="./countries.js"></script>
+-->
+	<script src="./world_10m.js"></script>
 	<script src="./jquery-1.11.1.min.js"></script>
 	<script src="./tinycolor.js"></script>
+	<script src="http://d3js.org/d3.v3.min.js" charset="utf-8"></script>
 	
 	<script src="./leaflet-search.js"></script>
 	<link rel="stylesheet" href="./leaflet-search.css" />
@@ -52,67 +58,91 @@
 		var map;
 		var info = L.control();
 		var legend = L.control({position: 'bottomright'});
+
+		var mouseX, mouseY;
 		
 		$.ajax({
 			type: "GET",
 			url: "WASTE_2014_SORTED.csv",
 			dataType: "text",
-			success: function(data) {processData(data);}
+			success: function(data) {processData(data); addGeoJson();}
 		});
+
+		$(document).mousemove( function(e) {
+		   mouseX = e.pageX; 
+		   mouseY = e.pageY;
+		   // console.log(mouseX, mouseY);
+		   $('.popup').css({'top': (mouseY + 10),'left': mouseX, 'position': 'absolute'}).fadeIn('slow');
+		});  
 		
 		$(document).ready(function() {
 			
 			map = L.map('map', {
+				maxBounds: [[-80, -180],[90, 180]],
 				center: [42,0],
 				zoom: 2,
 				minZoom: 2,
-				maxZoom: 5
+				maxZoom: 7,
 			});
 			
 			info.addTo(map);
 			legend.addTo(map);
+			// info.setOpacity(1);
 			
-			L.tileLayer('./coolTiles/{id}/{z}/{x}/{y}.png', {
-				id: ''
+			// Bathymetry layer
+			L.tileLayer('./coolerTiles/{id}/{z}/{x}/{y}.png', {
+				id: '',
+				//unloadInvisibleTiles: true,
+				//updateWhenIdle: false
 			}).addTo(map);
-			
-			//L.rectangle([[-1000, -1000],[1000, 1000]], {color: "#B5D0D0", fillOpacity: 1}).addTo(map);
-			
-			//var db = new SQLitePlugin("./water.mbtiles");
-			//console.log(db);
-			//var bath = new L.TileLayer.MBTiles('./water.mbtiles', {maxZoom: 14, scheme: 'tms'}, db);
-			//map.addLayer(bath);
-  
-			function style(feature){
-				return {
-					"fillColor": colorPal(feature.properties.val),
-					"color": "#fff",
-					"weight": 1.5,
-					"fillOpacity": 0.8
-				};
-			};
-			// Have to get rid of this reasonably
-			setTimeout(function(){
-				geojson = L.geoJson(countries, {style: style, onEachFeature: onEachFeature}).addTo(map);
-				
-				var searchControl = new L.Control.Search({layer: geojson, propertyName: 'name', circleLocation:false});
-				searchControl.on('search_locationfound', function(e) {
-
-					//e.layer.setStyle({fillColor: '#3f0'});
-					map.fitBounds(e.layer.getBounds());
-
-				}).on('search_collapsed', function(e) {
-
-					featuresLayer.eachLayer(function(layer) {
-						featuresLayer.resetStyle(layer);
-					}); 
-				});
-				map.addControl(searchControl);
-			}, 1000);
 		});
 		
-		// Color palette
+		function addGeoJson(){
+			geojson = L.geoJson(countries, {style: style, onEachFeature: onEachFeature}).addTo(map);
+				
+			var searchControl = new L.Control.Search({layer: geojson, propertyName: 'NAME', circleLocation:false});
+			searchControl.on('search_locationfound', function(e) {
+				geojson.eachLayer(function(layer) {
+					geojson.resetStyle(layer);
+				}); 
+
+				e.layer.setStyle({
+					weight: 2,
+					color: "#0000ff",
+					dashArray: '',
+					// Have to add a ligthen function;
+					fillOpacity: 0.7
+				});
+				// Find biggest area
+				// console.log(e.layer.feature);
+				var largestRegion = getLargestBoundingRegion(e.layer.feature);
+				var bounds = L.polygon(largestRegion).getBounds();
+				var coords = bounds._northEast;
+				console.log(coords);
+				// map.panTo(coords);
+				// map.fitBounds(bounds);
+
+			}).on('search_collapsed', function(e) {
+				geojson.eachLayer(function(layer) {
+					geojson.resetStyle(layer);
+				}); 
+			});
+			map.addControl(searchControl);
+		}
 		
+		function style(feature){
+			return {
+				// "fillColor": colorPal(feature.properties.val),
+				// "color": "#fff",
+				// "weight": 1.5,
+				// "fillOpacity": 0.8
+				"fillOpacity": 0,
+				"weight": 0,
+				"fillColor": "#fff"
+			};
+		};
+		
+		// Color palette
 		function colorPal(val){
 			// Base color, set initial sat and lum here
 			var col = tinycolor("hsv(0, 100%, 80%)").toHsv();
@@ -137,6 +167,49 @@
 			return tinycolor(col).toHexString();
 		}
 		
+		function hoverFeature(e) {
+			var props = e.target.feature.properties;
+			var layer = e.target;
+
+			// console.log(e.target);
+			// e.target.bindPopup("<b>Score for " + props.name + " is:</b><br>" + props.val +" out of 100.").openPopup();
+
+			//$("body").append("<div class=popup id=popup_" +props.name +"><b>Score for " + props.name + " is:</b><br>" + props.val +" out of 100.</div>");
+
+
+			layer.setStyle({
+				weight: 2,
+				color: "#0000ff",
+				dashArray: '',
+				// Have to add a ligthen function;
+				fillOpacity: 0.2
+			});
+
+			if (!L.Browser.ie && !L.Browser.opera) {
+				layer.bringToFront();
+			}
+			info.update(layer.feature.properties);
+		}
+		
+		function unhoverFeature(e) {
+			//var props = e.target.feature.properties;
+			//$("#popup_" + props.name).remove();
+			geojson.resetStyle(e.target);
+			info.update();
+		}
+		
+		function zoomToFeature(e) {
+			map.fitBounds(e.target.getBounds());
+		}
+
+		function onEachFeature(feature, layer) {
+			layer.on({
+				mouseover: hoverFeature,
+				mouseout: unhoverFeature,
+				click: zoomToFeature
+			});
+		}
+
 		info.onAdd = function (map) {
 			this._div = L.DomUtil.create('div', 'info'); // create a div with a class "info"
 			this.update();
@@ -147,14 +220,18 @@
 		info.update = function (props) {
 			var display = "";
 			if (props){
-				display = "<b>" + props.name + "</b>";
-				if (props.val == -9999)
-					display += "<br /> Sorry, we do not have data for " + props.name;
-				else
-					display += "<br />" + props.val + " points (out of 100)"
+				if (props.name == undefined)
+					display += "Sorry, we do not have data for this country.";
+				else{
+					display = "<b>" + props.name + "</b>";
+					if (props.val == -9999)
+						display += "<br /> Sorry, we do not have data for " + props.name + ".";
+					else
+						display += "<br />" + props.val + " points (out of 100)"
+				}
 			}
 			else
-				display = "<b> Hover over a state! </b><br /> -";
+				display = "<b> Hover over a country! </b><br /> -";
 				
 			this._div.innerHTML = display;
 		};
@@ -176,41 +253,6 @@
 		};
 
 		legend.addTo(map);
-		
-		function highlightFeature(e) {
-			var layer = e.target;
-
-			layer.setStyle({
-				weight: 2,
-				color: "#0000ff",
-				// Have to add a ligthen function;
-				dashArray: '',
-				fillOpacity: 0.7
-			});
-
-			if (!L.Browser.ie && !L.Browser.opera) {
-				layer.bringToFront();
-			}
-			info.update(layer.feature.properties);
-		}
-		
-		function resetHighlight(e) {
-			geojson.resetStyle(e.target);
-			info.update();
-		}
-		
-		function zoomToFeature(e) {
-			map.fitBounds(e.target.getBounds());
-		}
-
-		function onEachFeature(feature, layer) {
-			layer.on({
-				mouseover: highlightFeature,
-				mouseout: resetHighlight,
-				click: zoomToFeature
-			});
-		}
-
 
 		function processData(allText) {
 			var allTextLines = allText.split(/\r\n|\n/);
@@ -228,12 +270,52 @@
 					lines.push(tarr);
 				}
 			}
-			//console.log(lines[14][27].split(':')[1]);
 			// Load data into JSON object
 			for(i = 0; i < countries.features.length; i++){
-				countries.features[i].properties.val = parseInt(lines[i][27].split(':')[1]);
-				//console.log(countries.features[i]);
+				for (j = 0; j < lines.length; j++){
+					if (countries.features[i].properties.ADM0_A3 == lines[j][1].split(':')[1]){
+						countries.features[i].properties.val = parseInt(lines[j][27].split(':')[1]);
+						countries.features[i].properties.name = countries.features[i].properties.NAME.replace(/[\s\.']/g, '');
+						// console.log(countries.features[i].properties);
+					}
+				}	
 			}
+		}
+
+		function getLargestBoundingRegion(country) {
+
+			var largestRegionCoords;
+			var path = d3.geo.path();
+
+			//Check if the country has more than one bounding region.
+			if (country.geometry.coordinates.length > 1) {
+			    var regionToReturn = {        
+			        "type": "Feature",
+			        "geometry": {
+			            "type": "Polygon", 
+			            "coordinates": country.geometry.coordinates[0]
+			        }           
+			    };
+
+			    for (var i=1; i<country.geometry.coordinates.length; i++) {
+			        var testRegion = {        
+			                "type": "Feature",
+			                "geometry": {
+			                    "type": "Polygon", 
+			                    "coordinates": country.geometry.coordinates[i]
+			                },            
+			        };
+
+			        if (path.area(testRegion) > path.area(regionToReturn)) {
+			            regionToReturn = testRegion;    
+			            largestRegionCoords = country.geometry.coordinates[i][0]; 
+			        }
+			    }
+		    } 
+		    else {    
+		        largestRegionCoords = country.geometry.coordinates[0][0];
+		    }
+			return largestRegionCoords;
 		}
 	</script>
 </head>
