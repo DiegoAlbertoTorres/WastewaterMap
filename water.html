@@ -6,68 +6,34 @@
 
 	<meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-	<link rel="stylesheet" href="./leaflet.css" />
-	<style>
-		#map{
-			width: 100%;
-			height: 100%;
-			position: absolute;
-			top: 0px;
-			left: 0px;
-			background: #5896CE;
-		}
-		.info {
-			padding: 6px 8px;
-			font: 14px/16px Arial, Helvetica, sans-serif;
-			background: white;
-			background: rgba(240,240,240,1);
-			box-shadow: 0 0 15px rgba(0,0,0,0.2);
-			border-radius: 2px;
-			opacity: 1;
-		}
-		.info h4 {
-			margin: 0 0 5px;
-			color: #777;
-		}
-		.legend {
-			line-height: 18px;
-			color: #555;
-		}
-		.legend i {
-			width: 18px;
-			height: 18px;
-			float: left;
-			margin-right: 8px;
-			opacity: 1;
-		}
-	</style>
 	<script src="./leaflet.js"></script>
-<!--
-	<script src="./countries.js"></script>
--->
-	<script src="./world_10m.js"></script>
+	<script src="./world_10m_withlessdata.js"></script>
 	<script src="./jquery-1.11.1.min.js"></script>
+	<script src="./slide.js"></script>
 	<script src="./tinycolor.js"></script>
 	<script src="http://d3js.org/d3.v3.min.js" charset="utf-8"></script>
 	
 	<script src="./leaflet-search.js"></script>
 	<link rel="stylesheet" href="./leaflet-search.css" />
+	<link rel="stylesheet" href="./leaflet.css" />
+	<link rel="stylesheet" href="./style.css" />
 
 	<script>
 		var geojson;
 		var map;
 		var info = L.control();
-		var legend = L.control({position: 'bottomright'});
+		var legend = L.control({position: 'bottomleft'});
 
 		var mouseX, mouseY;
 		
-		$.ajax({
-			type: "GET",
-			url: "WASTE_2014_SORTED.csv",
-			dataType: "text",
-			success: function(data) {processData(data); addGeoJson();}
-		});
-
+		//$.ajax({
+			//type: "GET",
+			//url: "WASTE_2014_SORTED.csv",
+			//dataType: "text",
+			//success: function(data){ /*processData(data, "WASTECXN");*/ getWaste();}
+		//});
+		getWaste();
+		
 		$(document).mousemove( function(e) {
 		   mouseX = e.pageX; 
 		   mouseY = e.pageY;
@@ -76,7 +42,16 @@
 		});  
 		
 		$(document).ready(function() {
-			
+			$('#slide_out_info').tabSlideOut({
+				tabHandle: '.handle',                     //class of the element that will become your tab
+				//Optionally can be set using css
+				height: '110px',                     //height of tab image           //Optionally can be set using css
+				width: '30px',                       //width of tab image            //Optionally can be set using css
+				tabLocation: 'left',                      //side of screen where tab lives, top, right, bottom, or left
+				speed: 400,                               //speed of animation
+				action: 'click',                  //options: true makes it stick(fixed position) on scroll
+			});
+
 			map = L.map('map', {
 				maxBounds: [[-80, -180],[90, 180]],
 				center: [42,0],
@@ -90,7 +65,7 @@
 			// info.setOpacity(1);
 			
 			// Bathymetry layer
-			L.tileLayer('./coolerTiles/{id}/{z}/{x}/{y}.png', {
+			L.tileLayer('./BestTiles/{id}/{z}/{x}/{y}.png', {
 				id: '',
 				//unloadInvisibleTiles: true,
 				//updateWhenIdle: false
@@ -100,7 +75,7 @@
 		function addGeoJson(){
 			geojson = L.geoJson(countries, {style: style, onEachFeature: onEachFeature}).addTo(map);
 				
-			var searchControl = new L.Control.Search({layer: geojson, propertyName: 'NAME', circleLocation: false, autoType: false, zoom: false, });
+			var searchControl = new L.Control.Search({layer: geojson, propertyName: 'goodName', circleLocation: false, autoType: false, zoom: false, });
 			searchControl.on('search_locationfound', function(e) {
 				geojson.eachLayer(function(layer) {
 					geojson.resetStyle(layer);
@@ -108,15 +83,15 @@
 
 				e.layer.setStyle({
 					weight: 2,
-					color: "#0000ff",
+					color: "#FABB34",
 					dashArray: '',
 					// Have to add a ligthen function;
-					fillOpacity: 0.7
+					fillOpacity: 0.2
 				});
 				// Find biggest area
 				//var largestRegion = getLargestBoundingRegion(e.layer.feature);
 				//var bounds = L.polygon(largestRegion).getBounds();
-				//map.panTo(bounds);
+				//map.fitBounds(bounds);
 				//console.log(bounds);
 				 
 				//console.log(e.layer);
@@ -146,12 +121,12 @@
 		// Color palette
 		function colorPal(val){
 			// Base color, set initial sat and lum here
-			var col = tinycolor("hsv(0, 100%, 80%)").toHsv();
+			var col = tinycolor("hsv(0, 80%, 80%)").toHsv();
 			
 			// Color range angle
 			var range = 60;
 			// Color angle offset
-			var offset = 0;
+			var offset = 200;
 			
 			// Saturation is val
 			if (val == -9999) return "#999";
@@ -180,7 +155,7 @@
 
 			layer.setStyle({
 				weight: 2,
-				color: "#0000ff",
+				color: "#FABB34",
 				dashArray: '',
 				// Have to add a ligthen function;
 				fillOpacity: 0.2
@@ -212,29 +187,75 @@
 		}
 
 		info.onAdd = function (map) {
-			this._div = L.DomUtil.create('div', 'info'); // create a div with a class "info"
-			this.update();
+			this._div = L.DomUtil.create('div', 'countryInfo'); // create a div with a class "info"
+			var infoPanel = $(this)[0]._div;
+			
+			$(infoPanel).empty();
+			
+			var infoBreakdown = "";
+			infoBreakdown += "<div class=breakHeader id=breakCountry> <span> <b>National Wastewater Treatment Score</b> </span> </div>";
+			infoBreakdown += "<div class=breakData id=dataCountry> <span>" + "-" + "</span> </div> <br /> <br />";
+			infoBreakdown += "<div class=breakHeader id=breakWasteCXN> <span> <b>Wastewater Treatment Level Times Connection Rate</b> </span> </div>";
+			infoBreakdown += "<div class=breakData id=dataWasteCXN> <span>" + "-" + "</span> </div> <br /> <br />";
+			infoBreakdown += "<div class=breakHeader id=breakWaste> <span> <b>Percentage of Population Connected</b> </span> </div>";
+			infoBreakdown += "<div class=breakData id=dataWaste> <span>" + "-" + "</span> </div> <br  /> <br />";
+			infoBreakdown += "<div class=breakHeader id=breakCXN> <span> <b>Wastewater Treatment Level</b> </span> </div>";
+			infoBreakdown += "<div class=breakData id=dataCXN> <span>" + "-" + "</span> </div> <br /> <br />";
+			$(infoPanel).append(infoBreakdown);
 			return this._div;
 		};
-
-		// method that we will use to update the control based on feature properties passed
+		
 		info.update = function (props) {
-			var display = "";
+			var infoPanel = $(this)[0]._div
+			
+			var infoBreakdown = "",
+				name = "-",
+				cxn = "-",
+				waste = "-",
+				wastecxn = "-";
+
+			$(infoPanel).find(".breakData").each(function(){
+				if (($(this).css("opacity") != 1) && ($(this).attr("fadingOut") === undefined)){
+					// Remove everything that is trying to fade in
+					$(this).remove();
+				}
+				else if ($(this).css("opacity") == 1 && ($(this).attr("fadingOut") === undefined)){
+					// Fade out established element
+					$(this).attr("fadingOut", "true");
+					$(this).fadeOut(700, function() { $(this).remove(); });
+				}
+				//else
+					//$(this).stop().fadeOut(700, function() { $(this).remove(); });
+			});
 			if (props){
-				if (props.name == undefined)
-					display += "Sorry, we do not have data for this country.";
+				if (props.goodName == undefined){
+					name = "???";
+				}
 				else{
-					display = "<b>" + props.name + "</b>";
-					if (props.val == -9999)
-						display += "<br /> Sorry, we do not have data for " + props.name + ".";
-					else
-						display += "<br />" + props.val + " points (out of 100)"
+					name = props.goodName;
+					if (props.val == undefined || props.val == -9999){
+						cxn = "No data";
+						waste = "No data";
+						wastecxn = "No data";
+					}
+					else{
+						cxn = props.cxn;
+						waste = props.waste;
+						wastecxn = props.val;
+					}
 				}
 			}
-			else
-				display = "<b> Hover over a country! </b><br /> -";
 				
-			this._div.innerHTML = display;
+			var dataCountry = "<div class=breakData id=dataCountry> <span>" + name + "</span> </div>";
+			var dataWaste = "<div class=breakData id=dataWaste> <span>" + waste + "</span> </div>";
+			var dataCXN = "<div class=breakData id=dataCXN> <span>" + cxn + "</span> </div>";
+			var dataWasteCXN = "<div class=breakData id=dataWasteCXN> <span>" + wastecxn + "</span> </div>";
+			
+			// Try to fade in newly hovered country
+			$(dataCountry).hide().insertAfter("#breakCountry").fadeIn(700);
+			$(dataWaste).hide().insertAfter("#breakWaste").fadeIn(700);
+			$(dataCXN).hide().insertAfter("#breakCXN").fadeIn(700);
+			$(dataWasteCXN).hide().insertAfter("#breakWasteCXN").fadeIn(700);
 		};
 
 		legend.onAdd = function (map) {
@@ -243,10 +264,11 @@
 				grades = [0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100],
 				labels = [];
 
+			div.innerHTML += "<b>Country Score</b> <br/>";
 			// loop through our density intervals and generate a label with a colored square for each interval
-			for (var i = 0; i < grades.length; i++) {
-				div.innerHTML +=
-					'<i style="background:' + colorPal(grades[i]) + '"></i> ' +
+			for (var i = 0; i < grades.length - 1; i++) {
+				// console.log(colorPal(grades[i]));
+				div.innerHTML += '<i style="background:' + colorPal(grades[i]) + '"></i> ' +
 					grades[i] + (grades[i + 1] ? '&ndash;' + grades[i + 1] + '<br>' : '+');
 			}
 
@@ -255,7 +277,7 @@
 
 		legend.addTo(map);
 
-		function processData(allText) {
+		function processData(allText, file) {
 			var allTextLines = allText.split(/\r\n|\n/);
 			var headers = allTextLines[0].split(',');
 			var lines = [];
@@ -272,15 +294,41 @@
 				}
 			}
 			// Load data into JSON object
-			for(i = 0; i < countries.features.length; i++){
-				for (j = 0; j < lines.length; j++){
-					if (countries.features[i].properties.ADM0_A3 == lines[j][1].split(':')[1]){
-						countries.features[i].properties.val = parseInt(lines[j][27].split(':')[1]);
-						countries.features[i].properties.name = countries.features[i].properties.NAME.replace(/[\s\.']/g, '');
-						// console.log(countries.features[i].properties);
-					}
-				}	
+			if (file == "WASTECXN"){
+				for(i = 0; i < countries.features.length; i++){
+					countries.features[i].properties.goodName = countries.features[i].properties.NAME;
+					countries.features[i].properties.iso3 = countries.features[i].properties.ADM0_A3;
+					countries.features[i].properties.val = -9999;
+					for (j = 0; j < lines.length; j++){
+						if (countries.features[i].properties.iso3 == lines[j][1].split(':')[1]){
+							countries.features[i].properties.val = parseInt(lines[j][27].split(':')[1]);
+						}
+					}	
+				}
 			}
+			else if (file == "WASTE"){
+				for(i = 0; i < countries.features.length; i++){
+					countries.features[i].properties.waste = -9999;
+					for (j = 0; j < lines.length; j++){
+						if (countries.features[i].properties.iso3 == lines[j][1].split(':')[1]){
+							//console.log(countries.features[i].properties.iso3, lines[j][27]);
+							countries.features[i].properties.waste = parseInt(lines[j][27].split(':')[1]);
+						}
+					}	
+				}
+			}
+			else if (file == "CXN"){
+				for(i = 0; i < countries.features.length; i++){
+					countries.features[i].properties.cxn = -9999;
+					for (j = 0; j < lines.length; j++){
+						if (countries.features[i].properties.iso3 == lines[j][1].split(':')[1]){
+							//console.log(countries.features[i].properties.iso3, lines[j][22]);
+							countries.features[i].properties.cxn = parseInt(lines[j][22].split(':')[1]);
+						}
+					}	
+				}
+			}
+			
 		}
 
 		function getLargestBoundingRegion(country) {
@@ -318,9 +366,48 @@
 		    }
 			return largestRegionCoords;
 		}
+		
+		function getWaste(){
+			$.ajax({
+				type: "GET",
+				url: "WASTE.csv",
+				dataType: "text",
+				success: function(data){ processData(data, "WASTE"); getCXN();}
+			});
+		}
+		
+		function getCXN(){
+			$.ajax({
+				type: "GET",
+				url: "CXN.csv",
+				dataType: "text",
+				success: function(data){ processData(data, "CXN"); addGeoJson();}
+			});
+		}
+
 	</script>
 </head>
 <body>
 	<div id="map"></div>
+	<div id="slide_out_info">
+    	<a class="handle" href="#">
+    		<span id="rotated_text">MAP INFO</span>
+      	</a>
+      	<div class="content">
+			<div class="text" style="font-family: arial; font-size: 14px;">
+				<h1 style="color: #366ab2">Lorem Ipsum</h1> <br>
+				<strong>Lorem Ipsum</strong><br><br>
+				<i>Prepared for the 2014 Environmental Performance Index</i> <br><br>
+
+				Lorem ipsum dolor sit amet, consectetur adipiscing elit. Vivamus eget condimentum nisi. Vestibulum et nunc eget metus condimentum blandit ut vel nisl. Maecenas at placerat leo. Donec nec metus risus. Cras magna nisi, ornare a sapien euismod, laoreet placerat nisi. Pellentesque sit amet blandit nunc. Interdum et malesuada fames ac ante ipsum primis in faucibus. Morbi iaculis ante sed semper lobortis. Donec tellus nunc, sollicitudin in massa in, dignissim eleifend massa. Curabitur varius libero eros, non ornare nisi imperdiet ac. Aenean sollicitudin purus sit amet faucibus feugiat.
+				<br><br><br>
+				Citation:<br><br>
+				Johnson, L. (2014). National Status of the Dirty Dozen POPs regulation through the Stockholm Convention. New Haven, CT: Yale Center for Environmental Law & Policy.
+
+				<br><br>
+				<i>Map created by Diego Torres (Yale College '16)</i>
+      		</div>
+  		</div>
+    </div>
 </body>
 </html>
